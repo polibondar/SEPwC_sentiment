@@ -9,8 +9,14 @@ library(ggpubr)
 })
 
 load_data<-function(filename) {
-
-    return()
+  data <- read.csv(filename, sep = ",", header = TRUE, stringsAsFactors = FALSE)
+  cleaned_data <- gsub("<[^>]+>", "", data$content)
+  data$content <- cleaned_data
+  date_time <- ymd_hms(data$created_at)
+  data$created_at <- date_time
+  data <- filter(data, language== "en")
+  data <-read.csv(filename, colclasses= c( "id"= "character"))
+    return(data)
 }
 
 word_analysis<-function(toot_data, emotion) {
