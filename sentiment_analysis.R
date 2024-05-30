@@ -8,6 +8,7 @@ suppressPackageStartupMessages({
   library(ggpubr)
   library(syuzhet)
   library(stringr)
+  library(ggplot2)
 })
 
 load_data<-function(filename) { #using this function requires entering the file name for our data
@@ -24,21 +25,25 @@ word_analysis<-function(toot_data, emotion) { #using this function requires ente
   word_data <- toot_data %>%
         unnest_tokens(word, content) %>% #separating out the words
     group_by(id, created_at)
-  nrc_joy <- get_sentiments("nrc") %>%
-    filter(sentiment == emotion) 
+  nrc_emotion <- get_sentiments("nrc") %>%
+    filter(sentiment == emotion) #by specifying the emotion we alter the output
   filtered_by_emotion <- word_data %>%
-    inner_join(nrc_joy, by= "word") %>%
-      count(word, sort = TRUE) %>%
+    inner_join(nrc_emotion, by= "word") %>%
+      count(id, word, sentiment, sort = TRUE) %>%
   arrange (desc(n))
-    return(filtered_by_emotion)
+  top_10_emotion_words <-filtered_by_emotion %>% #top 10 most common emotion words sorted in descending order
+    ungroup() %>%
+    slice_max(order_by = n, n = 10)
+  
+    return(top_10_emotion_words)
 }
 
 sentiment_analysis<-function(toot_data) {
   data_lexicons <- toot_data %>%
     unnest_tokens(word, content) %>%
   group_by(id, created_at)
-  emotions <-get_nrc_sentiment(data$content) #analyse sentiments using the syuzhet library and NRC lexicon
-  emo_bar <-colSums(emotions) #dataframe of the emotions
+  emotions <- get_nrc_sentiment(toot_data$content) #analyse sentiments using the syuzhet library and NRC lexicon
+  emo_bar <- colSums(emotions) #dataframe of the emotions
   emo_sum <- data.frame(count=emo_bar,emotion =names(emo_bar)) #total count of the emotions
   ggplot(emo_sum, aes(x = reorder(emotion,-count), y = count))+
     geom_bar(stat = 'identity')
@@ -55,12 +60,30 @@ sentiment_analysis<-function(toot_data) {
     facet_wrap(~sentiment, scales= "free_y") +
     labs(y= "contribution to sentiment", x = NULL) +
     coord_flip()
-    return(data)
+    return(toot_data)
 
 }
 
 main <- function(args) {
-
+  toot_sentiment_bing <- toot_data %>%
+    inner_join(get_sentiments("bing")) %>%
+    count(sentiment) %>%
+    pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
+    mutate(sentiment = positive - negative)
+  ggplot(toot_sentiment, aes(id, sentiment, fill = emotion)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~book, ncol = 2, scales = "free_x")
+  toot_sentiment_afinn <- toot_data %>%
+    inner_join(get_sentiments("afinn")) %>%
+    group_by(id, created_at) %>%
+    summarise(sentiment = sum(value))
+  toot_sentiment_nrc <- toot_data %>%
+    inner_join(get_sentiments("nrc") %>%
+                 filter(sentiment %in% c("positive", "negative"))
+    ) %>%
+    count(sentiment) %>%
+    pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
+    mutate(sentiment = positive - negative)
 }
 
 
