@@ -1,11 +1,13 @@
 suppressPackageStartupMessages({
-library(sentimentr)
-library(tidytext)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(argparse)
-library(ggpubr)
+  library(sentimentr)
+  library(tidytext)
+  library(lubridate)
+  library(dplyr)
+  library(tidyr)
+  library(argparse)
+  library(ggpubr)
+  library(syuzhet)
+  library(stringr)
 })
 
 load_data<-function(filename) {
@@ -19,27 +21,46 @@ load_data<-function(filename) {
 }
 
 word_analysis<-function(toot_data, emotion) {
-  tidy_data <- data() %>%
-    group_by(id) %>% # so we have each comment as a group
-    summarize()
+  word_data <- data.frame(colnames=()) %>%
+    group_by(id) %>% #each comment is now its own group
+    select(id, created_at, emotions$joy) %>%
     mutate(            # adding columns
-      id = row_number())
-    ungroup() %>% 
+      id = row_number(),
+      created_at= created_at(),
+      word= placeholder(),
+      sentiment=content())
+  ungroup() %>% 
     unnest_tokens(word, text) #separating out the words
-  
-   nrc_joy <- get_sentiments("nrc") %>%
+  nrc_joy <- get_sentiments("nrc") %>%
     filter(sentiment == "joy")
-  data %>%
-      filter(data) %>%
+  word_data %>%
+    filter()
       inner_join(nrc_joy) %>%
-      count(word, sort = TRUE)
+      count(word, sentiment, sort = TRUE)
   arrange (.data, desc(), .by_group = TRUE)
     return(data)
 }
 
 sentiment_analysis<-function(toot_data) {
-
-    return()
+  emotions <-get_nrc_sentiment(data$content) #analyse sentiments using the syuzhet library and NRC lexicon
+  emo_bar <-colSums(emotions) #dataframe of the emotions
+  emo_sum <- data.frame(count=emo_bar,emotion =names(emo_bar)) #total count of the emotions
+  ggplot(emo_sum, aes(x = reorder(emotion,-count), y = count))+
+    geom_bar(stat = 'identity')
+  bing_word_counts <- data %>% unnest_tokens(output =word, input = text) %>%
+    inner_join(get_sentiments("bing")) %>%
+    count(word, sentiment, sort = TRUE)
+  bing_top_10_words_by_sentiment <- bing_word_counts %>%
+    group_by(sentiment) %>%
+    slice_max(order_by = n, n=10) %>%
+    ungroup() %>%
+    mutate(word=reorder(word,n))
+  bing_top_10_words_by_sentiment %>%
+    ggplot(aes(word, n, fill=sentiment)) +
+    facet_wrap(~sentiment, scales= "free_y") +
+    labs(y= "contribution to sentiment", x = NULL) +
+    coord_flip()
+    return(data)
 
 }
 
