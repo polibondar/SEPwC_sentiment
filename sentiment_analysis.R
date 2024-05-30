@@ -21,35 +21,29 @@ load_data<-function(filename) {
 }
 
 word_analysis<-function(toot_data, emotion) {
-  word_data <- data.frame(colnames=()) %>%
-    group_by(id) %>% #each comment is now its own group
-    select(id, created_at, emotions$joy) %>%
-    mutate(            # adding columns
-      id = row_number(),
-      created_at= created_at(),
-      word= placeholder(),
-      sentiment=content())
-  ungroup() %>% 
-    unnest_tokens(word, text) #separating out the words
+  word_data <- toot_data %>%
+        unnest_tokens(word, content) #separating out the words
   nrc_joy <- get_sentiments("nrc") %>%
-    filter(sentiment == "joy")
-  word_data %>%
-    filter()
-      inner_join(nrc_joy) %>%
-      count(word, sentiment, sort = TRUE)
-  arrange (.data, desc(), .by_group = TRUE)
-    return(data)
+    filter(sentiment == emotion)
+  filtered_by_emotion <- word_data %>%
+    inner_join(nrc_joy, by= "word") %>%
+      count(word) %>%
+  arrange (desc(n))
+    return(filtered_by_emotion)
 }
 
 sentiment_analysis<-function(toot_data) {
+  data_lexicons <- toot_data %>%
+    unnest_tokens(word, content) %>%
+  group_by(id)
   emotions <-get_nrc_sentiment(data$content) #analyse sentiments using the syuzhet library and NRC lexicon
   emo_bar <-colSums(emotions) #dataframe of the emotions
   emo_sum <- data.frame(count=emo_bar,emotion =names(emo_bar)) #total count of the emotions
   ggplot(emo_sum, aes(x = reorder(emotion,-count), y = count))+
     geom_bar(stat = 'identity')
-  bing_word_counts <- data %>% unnest_tokens(output =word, input = text) %>%
+  bing_word_counts <- data_lexicons %>%
     inner_join(get_sentiments("bing")) %>%
-    count(word, sentiment, sort = TRUE)
+    count(word, sort = TRUE)
   bing_top_10_words_by_sentiment <- bing_word_counts %>%
     group_by(sentiment) %>%
     slice_max(order_by = n, n=10) %>%
