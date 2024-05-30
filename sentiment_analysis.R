@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
   library(stringr)
 })
 
-load_data<-function(filename) {
+load_data<-function(filename) { #using this function requires entering the file name for our data
   data <- read.csv(filename, sep = ",", header = TRUE, stringsAsFactors = FALSE, colClasses=c("id"="character")) # preparing the data and giving the class to the "ID" column
   cleaned_data <- gsub("<[^>]+>", "", data$content) # getting rid of html
   data$content <- cleaned_data
@@ -20,14 +20,15 @@ load_data<-function(filename) {
     return(data)
 }
 
-word_analysis<-function(toot_data, emotion) {
+word_analysis<-function(toot_data, emotion) { #using this function requires entering data as the toot_data value
   word_data <- toot_data %>%
-        unnest_tokens(word, content) #separating out the words
+        unnest_tokens(word, content) %>% #separating out the words
+    group_by(id, created_at)
   nrc_joy <- get_sentiments("nrc") %>%
-    filter(sentiment == emotion)
+    filter(sentiment == emotion) 
   filtered_by_emotion <- word_data %>%
     inner_join(nrc_joy, by= "word") %>%
-      count(word) %>%
+      count(word, sort = TRUE) %>%
   arrange (desc(n))
     return(filtered_by_emotion)
 }
@@ -35,7 +36,7 @@ word_analysis<-function(toot_data, emotion) {
 sentiment_analysis<-function(toot_data) {
   data_lexicons <- toot_data %>%
     unnest_tokens(word, content) %>%
-  group_by(id)
+  group_by(id, created_at)
   emotions <-get_nrc_sentiment(data$content) #analyse sentiments using the syuzhet library and NRC lexicon
   emo_bar <-colSums(emotions) #dataframe of the emotions
   emo_sum <- data.frame(count=emo_bar,emotion =names(emo_bar)) #total count of the emotions
