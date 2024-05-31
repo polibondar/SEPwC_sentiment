@@ -40,7 +40,7 @@ word_analysis <- function(toot_data, emotion) {
   filtered_by_emotion <- word_data %>%
     inner_join(nrc_emotion, by = "word") %>%
     count(id, word, sentiment, sort = TRUE) %>%
-  arrange(desc(n))
+    arrange(desc(n))
   #now we have a table with id, created_at, word, sentiment and quantities
   top_10_emotion_words <- filtered_by_emotion %>%
     #top 10 most common emotion words sorted in descending order
@@ -108,7 +108,7 @@ main <- function(args) {
   #analysing toots against nrc lexicon
   toot_sentiment_nrc <- data_lexicons %>%
     inner_join(get_sentiments("nrc") %>%
-    filter(sentiment %in% c("positive", "negative"))) %>%
+                 filter(sentiment %in% c("positive", "negative"))) %>%
     count(sentiment) %>%
     pivot_wider(names_from = sentiment,
                 values_from = n,
@@ -138,21 +138,20 @@ main <- function(args) {
 
 if (sys.nframe() == 0) {
   # main program, called via Rscript
-  parser = ArgumentParser(
+  parser <- ArgumentParser(
     prog = "Sentiment Analysis",
-    description ="Analyse toots for word and sentence sentiments"
+    description = "Analyse toots for word and sentence sentiments"
                     )
   parser$add_argument("filename",
-    help="the file to read the toots from")
+                   help="the file to read the toots from")
   parser$add_argument("--emotion",
-    default="anger",
+                     default="anger",
     help="which emotion to search for")
   parser$add_argument('-v', '--verbose',
-    action='store_true',
+                     action='store_true',
     help="Print progress")
   parser$add_argument('-p', '--plot',
-    help="Plot something. Give the filename")
+                     help="Plot something. Give the filename")
   args = parser$parse_args()  
   main(args)
 }
-
