@@ -71,25 +71,34 @@ sentiment_analysis<-function(toot_data) {
 
 main <- function(args) {
   toot_sentiment_bing <- toot_data %>%
-    inner_join(get_sentiments("bing")) %>%
+    inner_join(get_sentiments("bing")) %>% #analysing toots against bing lexicon
     count(sentiment) %>%
     pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
     mutate(sentiment = positive - negative)
+  mutate(method = "bing") %>%
+    select(id, created_at, sentiment, method)
   ggplot(toot_sentiment, aes(id, sentiment, fill = emotion)) +
     geom_col(show.legend = FALSE) +
-    facet_wrap(~book, ncol = 2, scales = "free_x")
+    facet_wrap(~emotion, ncol = 2, scales = "free_x")
+  
   toot_sentiment_afinn <- toot_data %>%
-    inner_join(get_sentiments("afinn")) %>%
+    inner_join(get_sentiments("afinn")) %>% #analysing toots against afinn lexicon
     group_by(id, created_at) %>%
     summarise(sentiment = sum(value))
+  mutate(method = "afinn") %>%
+    select(id, created_at, sentiment, method)
+  
   toot_sentiment_nrc <- toot_data %>%
-    inner_join(get_sentiments("nrc") %>%
+    inner_join(get_sentiments("nrc") %>% #analysing toots against nrc lexicon
                  filter(sentiment %in% c("positive", "negative"))
     ) %>%
     count(sentiment) %>%
     pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
     mutate(sentiment = positive - negative)
-  return(toot_data) 
+  mutate(method = "nrc") %>%
+    select(id, created_at, sentiment, method)
+  sentiment_data <- bind_rows(toot_sentiment_bing, toot_sentiment_afinn, toot_sentiment_nrc) #combining all the results
+  return(sentiment_data) 
 }
 
 
