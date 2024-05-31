@@ -108,7 +108,7 @@ main <- function(args) {
   #analysing toots against nrc lexicon
   toot_sentiment_nrc <- data_lexicons %>%
     inner_join(get_sentiments("nrc") %>%
-       filter(sentiment %in% c("positive", "negative"))) %>%
+    filter(sentiment %in% c("positive", "negative"))) %>%
     count(sentiment) %>%
     pivot_wider(names_from = sentiment,
                 values_from = n,
@@ -119,9 +119,9 @@ main <- function(args) {
   sentiment_data <- bind_rows(toot_sentiment_bing,
                               toot_sentiment_afinn,
                               toot_sentiment_nrc) #combining all the results
-  filename <-args$filename
-  output <-args$output
-  emotion <-args$emotion
+  filename <- args$filename
+  output <- args$output
+  emotion <- args$emotion
   data <- load_data(filename)
   word_data <- word_analysis(data, emotion)
   sentiment_data <- sentiment_analysis(data)
@@ -132,27 +132,26 @@ main <- function(args) {
          x = "Words", y = "Frequency") +
     theme_minimal()
   ggsave(output, plot = plot_overall, width = 8, height = 6)
-  return(sentiment_data) 
+  return(sentiment_data)
 }
 
 
-if(sys.nframe() == 0) {
+if (sys.nframe() == 0) {
   # main program, called via Rscript
   parser = ArgumentParser(
-                    prog="Sentiment Analysis",
-                    description="Analyse toots for word and sentence sentiments"
+    prog = "Sentiment Analysis",
+    description ="Analyse toots for word and sentence sentiments"
                     )
   parser$add_argument("filename",
-                    help="the file to read the toots from")
+    help="the file to read the toots from")
   parser$add_argument("--emotion",
-                      default="anger",
-                      help="which emotion to search for")
+    default="anger",
+    help="which emotion to search for")
   parser$add_argument('-v', '--verbose',
-                    action='store_true',
-                    help="Print progress")
+    action='store_true',
+    help="Print progress")
   parser$add_argument('-p', '--plot',
-                    help="Plot something. Give the filename")
-  
+    help="Plot something. Give the filename")
   args = parser$parse_args()  
   main(args)
 }
