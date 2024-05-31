@@ -26,19 +26,19 @@ load_data<-function(filename) { #using this function requires entering the file 
 word_analysis<-function(toot_data, emotion) { #using this function requires entering data as the toot_data value
   
   word_data <- toot_data %>%
-        unnest_tokens(word, content) %>% #separating out the words
+        unnest_tokens(word, content) %>% #separating out the words- now we have a word column
     group_by(id, created_at)
   nrc_emotion <- get_sentiments("nrc") %>%
     filter(sentiment == emotion) #by specifying the emotion we alter the output
-  filtered_by_emotion <- word_data %>%
+  filtered_by_emotion <- word_data %>%  
     inner_join(nrc_emotion, by= "word") %>%
       count(id, word, sentiment, sort = TRUE) %>%
-  arrange (desc(n))
+  arrange (desc(n)) #now we have a table with id, created_at, word, sentiment and quantities
   top_10_emotion_words <-filtered_by_emotion %>% #top 10 most common emotion words sorted in descending order
     ungroup() %>%
     slice_max(order_by = n, n = 10)
   
-  return( top_10_emotion_words)
+  return(top_10_emotion_words)
   
 }
 
@@ -66,12 +66,15 @@ sentiment_analysis<-function(toot_data) {
     labs(y= "contribution to sentiment", x = NULL) +
     coord_flip()
   return(toot_data)
-
+  
 }
 
 main <- function(args) {
-  toot_sentiment_bing <- toot_data %>%
-    inner_join(get_sentiments("bing")) %>% #analysing toots against bing lexicon
+  data_lexicons <- toot_data %>% #content to words
+    unnest_tokens(word, content) %>%
+    group_by(id, created_at)
+  toot_sentiment_bing <- data_lexicons %>%
+    inner_join(get_sentiments("bing"), by = "word") %>% #analysing toots against bing lexicon
     count(sentiment) %>%
     pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
     mutate(sentiment = positive - negative)
@@ -81,14 +84,14 @@ main <- function(args) {
     geom_col(show.legend = FALSE) +
     facet_wrap(~emotion, ncol = 2, scales = "free_x")
   
-  toot_sentiment_afinn <- toot_data %>%
+  toot_sentiment_afinn <- data_lexicons %>%
     inner_join(get_sentiments("afinn")) %>% #analysing toots against afinn lexicon
     group_by(id, created_at) %>%
     summarise(sentiment = sum(value))
   mutate(method = "afinn") %>%
     select(id, created_at, sentiment, method)
   
-  toot_sentiment_nrc <- toot_data %>%
+  toot_sentiment_nrc <- data_lexicons %>%
     inner_join(get_sentiments("nrc") %>% #analysing toots against nrc lexicon
                  filter(sentiment %in% c("positive", "negative"))
     ) %>%
@@ -98,6 +101,19 @@ main <- function(args) {
   mutate(method = "nrc") %>%
     select(id, created_at, sentiment, method)
   sentiment_data <- bind_rows(toot_sentiment_bing, toot_sentiment_afinn, toot_sentiment_nrc) #combining all the results
+  filename <-args$filename
+  output <-args$output
+  emotion <-args$emotion
+  data <- load_data(filename)
+  word_data <- word_analysis(data, emotion)
+  sentiment_data <- sentiment_analysis(data)
+  plot_overall <- ggplot(word_data, aes(x = reorder(word, n), y = n)) +
+    geom_bar(stat = "identity") +
+    labs(title = paste("Top Words for Emotion:", emotion),
+         x = "Words", y = "Frequency") +
+    theme_minimal()
+  
+  ggsave(output, plot = plot_overall, width = 8, height = 6)
   return(sentiment_data) 
 }
 
