@@ -12,16 +12,19 @@ suppressPackageStartupMessages({
 })
 
 load_data<-function(filename) { #using this function requires entering the file name for our data
+  
   data <- read.csv(filename, sep = ",", header = TRUE, stringsAsFactors = FALSE, colClasses=c("id"="character")) # preparing the data and giving the class to the "ID" column
   cleaned_data <- gsub("<[^>]+>", "", data$content) # getting rid of html
   data$content <- cleaned_data
   date_time <- ymd_hms(data$created_at) # making sure the date format is year-month-date hour-minute-second
   data$created_at <- date_time
   data <- filter(data, language== "en")
+  
     return(data)
 }
 
 word_analysis<-function(toot_data, emotion) { #using this function requires entering data as the toot_data value
+  
   word_data <- toot_data %>%
         unnest_tokens(word, content) %>% #separating out the words
     group_by(id, created_at)
@@ -35,23 +38,25 @@ word_analysis<-function(toot_data, emotion) { #using this function requires ente
     ungroup() %>%
     slice_max(order_by = n, n = 10)
   
-    return(top_10_emotion_words)
+  return( top_10_emotion_words)
+  
 }
 
 sentiment_analysis<-function(toot_data) {
-  data_lexicons <- toot_data %>%
+  
+  data_lexicons <- toot_data %>% #content to words
     unnest_tokens(word, content) %>%
-  group_by(id, created_at)
+    group_by(id, created_at)
   emotions <- get_nrc_sentiment(toot_data$content) #analyse sentiments using the syuzhet library and NRC lexicon
   emo_bar <- colSums(emotions) #dataframe of the emotions
   emo_sum <- data.frame(count=emo_bar,emotion =names(emo_bar)) #total count of the emotions
-  ggplot(emo_sum, aes(x = reorder(emotion,-count), y = count))+
+  ggplot(emo_sum, aes(x = reorder(emotion,-count), y = count)) +
     geom_bar(stat = 'identity')
   bing_word_counts <- data_lexicons %>%
     inner_join(get_sentiments("bing")) %>%
     count(word, sort = TRUE)
   bing_top_10_words_by_sentiment <- bing_word_counts %>%
-    group_by(sentiment) %>%
+    group_by(word) %>%
     slice_max(order_by = n, n=10) %>%
     ungroup() %>%
     mutate(word=reorder(word,n))
@@ -60,7 +65,7 @@ sentiment_analysis<-function(toot_data) {
     facet_wrap(~sentiment, scales= "free_y") +
     labs(y= "contribution to sentiment", x = NULL) +
     coord_flip()
-    return(toot_data)
+  return(toot_data)
 
 }
 
@@ -84,6 +89,7 @@ main <- function(args) {
     count(sentiment) %>%
     pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>%
     mutate(sentiment = positive - negative)
+  return(toot_data) 
 }
 
 
